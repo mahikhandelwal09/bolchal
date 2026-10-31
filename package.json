@@ -1,8 +1,9 @@
 {
-  "name": "unprompted-recreation",
+  "name": "bolchal",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "Modern impromptu speech practice and fluency trainer with real-time video feedback, adaptive themes, and streak tracking.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

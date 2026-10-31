@@ -225,16 +225,34 @@ body {
   margin-bottom: clamp(1.75rem, 4.5vh, 2.75rem);
   animation: 0.9s cubic-bezier(0.22, 1, 0.36, 1) both rise;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .brand-mark {
   font-family: var(--font-display);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
   color: var(--ink);
   margin: 0;
-  font-size: clamp(2rem, 5vw, 2.75rem);
-  font-weight: 500;
-  line-height: 1;
+  font-size: clamp(2.5rem, 6.2vw, 3.6rem);
+  font-weight: 550;
+  line-height: 1.05;
+  font-variation-settings: 'opsz' 144, 'SOFT' 25;
+  text-rendering: optimizeLegibility;
+  transition: color 0.3s ease;
+}
+
+.brand-tagline {
+  font-family: var(--font-body);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0.45rem 0 0;
+  font-size: clamp(0.7rem, 1.4vw, 0.78rem);
+  font-weight: 650;
+  opacity: 0.9;
+  transition: color 0.3s ease;
 }
 
 .brand-line {
@@ -1015,12 +1033,12 @@ body {
 
 .settings-overlay {
   z-index: 50;
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  background: rgba(10, 14, 13, 0.75);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.32);
   place-items: center;
   padding: clamp(1rem, 4vw, 2rem);
-  animation: 0.35s cubic-bezier(0.22, 1, 0.36, 1) both overlay-in;
+  animation: 0.25s cubic-bezier(0.22, 1, 0.36, 1) both overlay-in;
   display: grid;
   position: fixed;
   inset: 0;
@@ -1035,13 +1053,49 @@ body {
   max-height: 90vh;
   overflow-y: auto;
   padding: 1.5rem 1.6rem 1.4rem;
-  animation: 0.4s cubic-bezier(0.22, 1, 0.36, 1) both rise;
+  animation: 0.3s cubic-bezier(0.22, 1, 0.36, 1) both rise;
   position: relative;
-  box-shadow: inset 0 0 0 1px var(--border), 0 24px 60px rgba(0, 0, 0, 0.75);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.45);
 }
 
 .settings-panel-head {
   margin-bottom: 1.25rem;
+}
+
+.settings-panel-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.settings-close-btn {
+  appearance: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.settings-close-btn:hover {
+  color: var(--ink);
+  background: var(--surface-input);
+  border-color: var(--border);
+}
+
+.settings-close-btn:focus-visible {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 2px;
 }
 
 .settings-panel-title {
@@ -1224,6 +1278,21 @@ body {
   overflow-y: auto;
 }
 
+.timer-mirrored-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.85rem, 2.5vh, 1.5rem);
+  width: 100%;
+  transform-origin: 50% 50%;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.timer-mirrored-content.is-mirrored-page {
+  transform: scaleX(-1);
+}
+
 .timer-topic {
   font-family: var(--font-body);
   letter-spacing: 0.04em;
@@ -1296,6 +1365,17 @@ body {
   align-items: center;
   gap: 0.75rem;
   display: flex;
+}
+
+.timer-mirror-btn {
+  font-size: 0.85rem;
+  padding: 0.75rem 1.15rem;
+}
+
+.timer-mirror-btn.is-active {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .timer-overlay.is-research .timer-ring {

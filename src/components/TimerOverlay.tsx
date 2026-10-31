@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { SPEECH_STAGES } from '../data/topics';
-import { Video, VideoOff } from 'lucide-react';
+import { FlipHorizontal } from 'lucide-react';
 
 interface TimerOverlayProps {
   topic: string;
@@ -9,14 +9,11 @@ interface TimerOverlayProps {
   remainingSeconds: number;
   totalDurationSeconds: number;
   speechDurationSeconds: number;
-  cameraStream: MediaStream | null;
-  cameraEnabled: boolean;
   isMirrored: boolean;
-  isRecording: boolean;
+  onToggleMirror: () => void;
   onDoneResearching: () => void;
   onStartSpeech: () => void;
   onClose: () => void;
-  onToggleCameraInTimer?: () => void;
 }
 
 function formatDigits(seconds: number): string {
@@ -61,18 +58,14 @@ export const TimerOverlay: React.FC<TimerOverlayProps> = ({
   remainingSeconds,
   totalDurationSeconds,
   speechDurationSeconds,
-  cameraStream,
-  cameraEnabled,
   isMirrored,
-  isRecording,
+  onToggleMirror,
   onDoneResearching,
   onStartSpeech,
   onClose,
-  onToggleCameraInTimer,
 }) => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   const isResearch = timerState === 'research';
   const isSpeech = timerState === 'speech' || timerState === 'done';
@@ -91,7 +84,7 @@ export const TimerOverlay: React.FC<TimerOverlayProps> = ({
 
   const isOffTheCuffSpeech = mode === 'off-the-cuff' && isSpeech;
 
-  // Dialog label and status text matching Unprompted
+  // Dialog label and status text
   const ariaLabel = isResearch
     ? 'Research timer'
     : isReady
@@ -105,13 +98,6 @@ export const TimerOverlay: React.FC<TimerOverlayProps> = ({
     : isDone
     ? 'Time.'
     : 'Speak.';
-
-  // Connect camera stream if active
-  useEffect(() => {
-    if (videoRef.current && cameraStream && cameraEnabled) {
-      videoRef.current.srcObject = cameraStream;
-    }
-  }, [cameraStream, cameraEnabled]);
 
   // Focus primary action button or close on mount
   useEffect(() => {
@@ -144,73 +130,52 @@ export const TimerOverlay: React.FC<TimerOverlayProps> = ({
       aria-label={ariaLabel}
     >
       <div className="timer-overlay-inner">
-        {/* Topic Title */}
-        {topic && <h3 className="timer-topic">{topic}</h3>}
+        {/* Mirrored Stage Content */}
+        <div className={`timer-mirrored-content ${isMirrored ? 'is-mirrored-page' : ''}`}>
+          {/* Topic Title */}
+          {topic && <h3 className="timer-topic">{topic}</h3>}
 
-        {/* Phase eyebrow if in research */}
-        {isResearch && <p className="timer-phase">Researching</p>}
+          {/* Phase eyebrow if in research */}
+          {isResearch && <p className="timer-phase">Researching</p>}
 
-        {/* Speech Arc Stages (What? So what? Now what?) */}
-        {isOffTheCuffSpeech && (
-          <ol className="speech-stages" aria-label="Speech arc">
-            {SPEECH_STAGES.map((stage, idx) => (
-              <li
-                key={stage}
-                className={`speech-stage ${
-                  idx < hitStages ? 'is-hit' : 'is-pending'
-                }`}
-              >
-                <span className="speech-stage-label">{stage}</span>
-              </li>
-            ))}
-          </ol>
-        )}
+          {/* Speech Arc Stages (What? So what? Now what?) */}
+          {isOffTheCuffSpeech && (
+            <ol className="speech-stages" aria-label="Speech arc">
+              {SPEECH_STAGES.map((stage, idx) => (
+                <li
+                  key={stage}
+                  className={`speech-stage ${
+                    idx < hitStages ? 'is-hit' : 'is-pending'
+                  }`}
+                >
+                  <span className="speech-stage-label">{stage}</span>
+                </li>
+              ))}
+            </ol>
+          )}
 
-        {/* Optional PiP Camera live feedback during practice */}
-        {cameraEnabled && cameraStream && (
-          <div className="w-48 h-28 rounded-xl overflow-hidden border border-[var(--border)] shadow-xl relative bg-black/60 my-1">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`w-full h-full object-cover transition-transform ${
-                isMirrored ? 'is-mirrored' : ''
-              }`}
-            />
-            {isRecording && (
-              <div className="absolute top-1.5 left-1.5 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-1 text-[0.65rem] text-white">
-                <span className="rec-pulse-dot" />
-                <span>REC</span>
-              </div>
-            )}
-            <div className="absolute bottom-1 right-1 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded text-[0.6rem] text-white/80">
-              {isMirrored ? 'Mirror ON' : 'Mirror OFF'}
-            </div>
+          {/* Timer Ring */}
+          <div
+            className="timer-ring"
+            style={{ '--p': progress } as React.CSSProperties}
+            role="timer"
+            aria-live="polite"
+          >
+            <span className="timer-digits">{formatDigits(remainingSeconds)}</span>
           </div>
-        )}
 
-        {/* Timer Ring */}
-        <div
-          className="timer-ring"
-          style={{ '--p': progress } as React.CSSProperties}
-          role="timer"
-          aria-live="polite"
-        >
-          <span className="timer-digits">{formatDigits(remainingSeconds)}</span>
-        </div>
-
-        {/* Status Callout */}
-        <p className="timer-status" aria-live="polite">
-          {statusText}
-        </p>
-
-        {/* Up next message when ready to speak */}
-        {isReady && (
-          <p className="timer-next">
-            Up next: {formatMinutesText(speechDurationSeconds)} to speak.
+          {/* Status Callout */}
+          <p className="timer-status" aria-live="polite">
+            {statusText}
           </p>
-        )}
+
+          {/* Up next message when ready to speak */}
+          {isReady && (
+            <p className="timer-next">
+              Up next: {formatMinutesText(speechDurationSeconds)} to speak.
+            </p>
+          )}
+        </div>
 
         {/* Action Controls */}
         <div className="timer-actions">
@@ -236,17 +201,17 @@ export const TimerOverlay: React.FC<TimerOverlayProps> = ({
             </button>
           )}
 
-          {onToggleCameraInTimer && (
-            <button
-              type="button"
-              className="btn secondary text-xs py-2 px-3"
-              onClick={onToggleCameraInTimer}
-              title="Toggle camera during practice"
-            >
-              {cameraEnabled ? <VideoOff size={14} /> : <Video size={14} />}
-              <span>{cameraEnabled ? 'Hide Camera' : 'Show Camera'}</span>
-            </button>
-          )}
+          {/* Mirror Toggle Button Inside Timer */}
+          <button
+            type="button"
+            className={`btn secondary timer-mirror-btn ${isMirrored ? 'is-active' : ''}`}
+            onClick={onToggleMirror}
+            title={isMirrored ? 'Turn mirror mode off' : 'Turn mirror mode on (flip horizontally)'}
+            aria-pressed={isMirrored}
+          >
+            <FlipHorizontal size={14} className={isMirrored ? 'text-[var(--accent)]' : ''} />
+            <span>{isMirrored ? 'Mirror On' : 'Mirror'}</span>
+          </button>
 
           <button
             type="button"

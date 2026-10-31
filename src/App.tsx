@@ -17,11 +17,9 @@ import { ModeSwitch } from './components/ModeSwitch';
 import { NicheSelect } from './components/NicheSelect';
 import { Reel } from './components/Reel';
 import { SettingsModal } from './components/SettingsModal';
-import { CameraView } from './components/CameraView';
 import { TimerOverlay } from './components/TimerOverlay';
-import { PlaybackModal } from './components/PlaybackModal';
 import { ThemeSelector } from './components/ThemeSelector';
-import { Sparkles, Camera, Video, Palette, FlipHorizontal } from 'lucide-react';
+import { Sparkles, Palette, FlipHorizontal, Settings } from 'lucide-react';
 
 const SPIN_DURATION_MS = 4800;
 
@@ -62,6 +60,7 @@ export function App() {
   });
 
   const [showQuickTheme, setShowQuickTheme] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Apply theme on load and changes
   useEffect(() => {
@@ -107,7 +106,7 @@ export function App() {
     }
   });
 
-  // Mirror control state (Feature One)
+  // Mirror control state (Global synchronized)
   const [isMirrored, setIsMirrored] = useState<boolean>(() => {
     try {
       return (localStorage.getItem('bolchal:mirrored') || localStorage.getItem('unprompted:mirrored')) === 'true';
@@ -144,19 +143,6 @@ export function App() {
       return 30;
     }
   });
-
-  // Camera and recording state
-  const [cameraEnabled, setCameraEnabled] = useState<boolean>(false);
-  const [autoRecord, setAutoRecord] = useState<boolean>(true);
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
-  const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
-
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
-  const recTimerIntervalRef = useRef<number | null>(null);
 
   // Reel states
   const activeTopics = practiceMode === 'deep-research' ? DEEP_RESEARCH_NICHE.topics : getNicheById(selectedNicheId).topics;
@@ -252,109 +238,6 @@ export function App() {
       setRemainingSeconds(speechSeconds);
     }
   }, [timerState, speechSeconds]);
-
-  // Camera stream management
-  const requestCamera = useCallback(async () => {
-    setCameraError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user',
-        },
-        audio: true,
-      });
-      setCameraStream(stream);
-      setCameraEnabled(true);
-    } catch (err: unknown) {
-      console.warn('Camera/Microphone access error:', err);
-      const message =
-        err instanceof Error
-          ? err.name === 'NotAllowedError'
-            ? 'Camera permission denied. Allow camera in your browser settings.'
-            : err.message
-          : 'Unable to access camera or microphone.';
-      setCameraError(message);
-      setCameraEnabled(false);
-    }
-  }, []);
-
-  const stopCamera = useCallback(() => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((track) => track.stop());
-      setCameraStream(null);
-    }
-    setCameraEnabled(false);
-  }, [cameraStream]);
-
-  const toggleCamera = () => {
-    if (cameraEnabled) {
-      stopCamera();
-    } else {
-      requestCamera();
-    }
-  };
-
-  // Video recording controls
-  const startRecording = useCallback(() => {
-    if (!cameraStream) return;
-    try {
-      recordedChunksRef.current = [];
-      const options: MediaRecorderOptions = {};
-      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
-        options.mimeType = 'video/webm;codecs=vp9,opus';
-      } else if (MediaRecorder.isTypeSupported('video/webm')) {
-        options.mimeType = 'video/webm';
-      } else if (MediaRecorder.isTypeSupported('video/mp4')) {
-        options.mimeType = 'video/mp4';
-      }
-
-      const recorder = new MediaRecorder(cameraStream, options);
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          recordedChunksRef.current.push(e.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        if (recordedChunksRef.current.length > 0) {
-          const blob = new Blob(recordedChunksRef.current, {
-            type: recordedChunksRef.current[0].type || 'video/webm',
-          });
-          const url = URL.createObjectURL(blob);
-          setRecordedVideoUrl(url);
-        }
-        setIsRecording(false);
-        setRecordingSeconds(0);
-        if (recTimerIntervalRef.current) {
-          window.clearInterval(recTimerIntervalRef.current);
-          recTimerIntervalRef.current = null;
-        }
-      };
-
-      recorder.start(500);
-      mediaRecorderRef.current = recorder;
-      setIsRecording(true);
-      setRecordingSeconds(0);
-
-      recTimerIntervalRef.current = window.setInterval(() => {
-        setRecordingSeconds((prev) => prev + 1);
-      }, 1000);
-    } catch (err) {
-      console.warn('Failed to start recording:', err);
-    }
-  }, [cameraStream]);
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    if (recTimerIntervalRef.current) {
-      window.clearInterval(recTimerIntervalRef.current);
-      recTimerIntervalRef.current = null;
-    }
-  }, []);
 
   // Topic changes when niche or mode switches
   const handleNicheChange = (newNicheId: string) => {
@@ -478,15 +361,11 @@ export function App() {
   // Transition to speaking timer
   const startSpeechPhase = useCallback(() => {
     setTimerState('speech');
-    if (cameraEnabled && autoRecord && cameraStream) {
-      startRecording();
-    }
     runCountdown(speechSeconds, () => {
       setTimerState('done');
       playTimerDoneChime();
-      stopRecording();
     });
-  }, [runCountdown, speechSeconds, cameraEnabled, autoRecord, cameraStream, startRecording, stopRecording]);
+  }, [runCountdown, speechSeconds]);
 
   // Start practice session button handler
   const handleStartPractice = useCallback(() => {
@@ -516,10 +395,9 @@ export function App() {
   // Close timer overlay
   const handleCloseTimer = useCallback(() => {
     clearPracticeTimer();
-    stopRecording();
     setTimerState('idle');
     setRemainingSeconds(speechSeconds);
-  }, [clearPracticeTimer, stopRecording, speechSeconds]);
+  }, [clearPracticeTimer, speechSeconds]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -527,12 +405,8 @@ export function App() {
       if (spinAnimFrameRef.current) window.cancelAnimationFrame(spinAnimFrameRef.current);
       if (spinTimeoutRef.current) window.clearTimeout(spinTimeoutRef.current);
       if (timerIntervalRef.current) window.clearInterval(timerIntervalRef.current);
-      if (recTimerIntervalRef.current) window.clearInterval(recTimerIntervalRef.current);
-      if (cameraStream) {
-        cameraStream.getTracks().forEach((track) => track.stop());
-      }
     };
-  }, [cameraStream]);
+  }, []);
 
   const isTimerActive = timerState !== 'idle';
   const isControlsDisabled = isSpinning || isTimerActive;
@@ -550,32 +424,20 @@ export function App() {
             <span>Speech Practice</span>
           </div>
 
-          {/* Unified Top Controls Toolbar: Theme, Camera, and Mirror */}
+          {/* Unified Top Navigation Controls: Theme, Mirror, and Settings */}
           <div className="top-controls-toolbar" role="toolbar" aria-label="Quick controls">
             <button
               type="button"
               className={`toolbar-btn ${showQuickTheme ? 'is-active' : ''}`}
-              onClick={() => setShowQuickTheme((prev) => !prev)}
-              title="Toggle theme palette selector"
+              onClick={() => {
+                setShowQuickTheme((prev) => !prev);
+                if (isSettingsOpen) setIsSettingsOpen(false);
+              }}
+              title="Theme palettes"
               aria-expanded={showQuickTheme}
             >
               <Palette size={13} className="toolbar-btn-icon text-[var(--accent)]" />
               <span className="toolbar-btn-label">Theme</span>
-            </button>
-
-            <button
-              type="button"
-              className={`toolbar-btn ${cameraEnabled ? 'is-active' : ''}`}
-              onClick={toggleCamera}
-              title={cameraEnabled ? 'Turn camera off' : 'Turn camera on for speaking stage'}
-              aria-pressed={cameraEnabled}
-            >
-              {cameraEnabled ? (
-                <Video size={13} className="toolbar-btn-icon text-[var(--accent)]" />
-              ) : (
-                <Camera size={13} className="toolbar-btn-icon" />
-              )}
-              <span className="toolbar-btn-label">{cameraEnabled ? 'Camera On' : 'Camera'}</span>
             </button>
 
             <button
@@ -587,6 +449,20 @@ export function App() {
             >
               <FlipHorizontal size={13} className={`toolbar-btn-icon ${isMirrored ? 'text-[var(--accent)]' : ''}`} />
               <span className="toolbar-btn-label">{isMirrored ? 'Mirror On' : 'Mirror'}</span>
+            </button>
+
+            <button
+              type="button"
+              className={`toolbar-btn ${isSettingsOpen ? 'is-active' : ''}`}
+              onClick={() => {
+                setIsSettingsOpen((prev) => !prev);
+                if (showQuickTheme) setShowQuickTheme(false);
+              }}
+              title="Open settings"
+              aria-expanded={isSettingsOpen}
+            >
+              <Settings size={13} className="toolbar-btn-icon" />
+              <span className="toolbar-btn-label">Settings</span>
             </button>
           </div>
         </header>
@@ -610,6 +486,7 @@ export function App() {
           {/* Brand Heading */}
           <div className="brand" inert={isTimerActive || undefined}>
             <h1 className="brand-mark">BolChal</h1>
+            <p className="brand-tagline">Speaking Practice</p>
           </div>
 
           {/* Main Practice Stage Container */}
@@ -650,19 +527,6 @@ export function App() {
                 <p className="sr-only" aria-live="polite">
                   {hasLanded ? `Your topic: ${displayedTopic}` : ''}
                 </p>
-
-                {/* Live Camera Practice Card (if enabled) */}
-                {cameraEnabled && (
-                  <CameraView
-                    stream={cameraStream}
-                    isMirrored={isMirrored}
-                    isRecording={isRecording}
-                    recordingSeconds={recordingSeconds}
-                    cameraError={cameraError}
-                    onRetry={requestCamera}
-                    onToggleCamera={toggleCamera}
-                  />
-                )}
               </div>
 
               {/* Day Counter: Inline between Topic Reel and Actions */}
@@ -678,7 +542,7 @@ export function App() {
                 </div>
               )}
 
-              {/* Action Buttons */}
+              {/* Action Buttons: Spin and Start Timer */}
               <div className="actions">
                 <div className="actions-main" inert={isTimerActive || undefined}>
                   <button
@@ -702,39 +566,30 @@ export function App() {
                       : `Start ${formatMinutesText(speechSeconds)} timer`}
                   </button>
                 </div>
-
-                {/* Settings Trigger & Dialog */}
-                <SettingsModal
-                  speechSeconds={speechSeconds}
-                  researchSeconds={researchSeconds}
-                  onChangeSpeech={setSpeechSeconds}
-                  onChangeResearch={setResearchSeconds}
-                  muted={isMuted}
-                  onChangeMuted={setIsMuted}
-                  currentTheme={currentTheme}
-                  onChangeTheme={setCurrentTheme}
-                  cameraEnabled={cameraEnabled}
-                  onChangeCameraEnabled={(enabled) => {
-                    if (enabled && !cameraStream) {
-                      requestCamera();
-                    } else if (!enabled && cameraStream) {
-                      stopCamera();
-                    }
-                  }}
-                  autoRecord={autoRecord}
-                  onChangeAutoRecord={setAutoRecord}
-                  dayCounterEnabled={dayCounterEnabled}
-                  onChangeDayCounterEnabled={setDayCounterEnabled}
-                  currentDay={currentDay}
-                  onChangeCurrentDay={setCurrentDay}
-                  totalDays={totalDays}
-                  onChangeTotalDays={setTotalDays}
-                  disabled={isControlsDisabled}
-                />
               </div>
             </main>
           </div>
         </div>
+
+        {/* Settings Dialog Modal */}
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          speechSeconds={speechSeconds}
+          researchSeconds={researchSeconds}
+          onChangeSpeech={setSpeechSeconds}
+          onChangeResearch={setResearchSeconds}
+          muted={isMuted}
+          onChangeMuted={setIsMuted}
+          currentTheme={currentTheme}
+          onChangeTheme={setCurrentTheme}
+          dayCounterEnabled={dayCounterEnabled}
+          onChangeDayCounterEnabled={setDayCounterEnabled}
+          currentDay={currentDay}
+          onChangeCurrentDay={setCurrentDay}
+          totalDays={totalDays}
+          onChangeTotalDays={setTotalDays}
+        />
 
         {/* Fullscreen Timer Practice Overlay */}
         {isTimerActive && (
@@ -745,30 +600,11 @@ export function App() {
             remainingSeconds={remainingSeconds}
             totalDurationSeconds={timerState === 'research' ? researchSeconds : speechSeconds}
             speechDurationSeconds={speechSeconds}
-            cameraStream={cameraStream}
-            cameraEnabled={cameraEnabled}
             isMirrored={isMirrored}
-            isRecording={isRecording}
+            onToggleMirror={handleToggleMirror}
             onDoneResearching={handleDoneResearching}
             onStartSpeech={startSpeechPhase}
             onClose={handleCloseTimer}
-            onToggleCameraInTimer={() => {
-              if (!cameraStream) {
-                requestCamera();
-              } else {
-                setCameraEnabled((c) => !c);
-              }
-            }}
-          />
-        )}
-
-        {/* Playback Review & Download Modal */}
-        {recordedVideoUrl && (
-          <PlaybackModal
-            videoUrl={recordedVideoUrl}
-            topic={displayedTopic}
-            isInitiallyMirrored={isMirrored}
-            onClose={() => setRecordedVideoUrl(null)}
           />
         )}
       </div>

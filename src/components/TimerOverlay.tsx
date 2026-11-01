@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from 'react';
 import { SPEECH_STAGES } from '../data/topics';
-import { FlipHorizontal } from 'lucide-react';
 
 interface TimerOverlayProps {
   topic: string;
@@ -9,8 +8,6 @@ interface TimerOverlayProps {
   remainingSeconds: number;
   totalDurationSeconds: number;
   speechDurationSeconds: number;
-  isMirrored: boolean;
-  onToggleMirror: () => void;
   onDoneResearching: () => void;
   onStartSpeech: () => void;
   onClose: () => void;
@@ -58,8 +55,6 @@ export const TimerOverlay: React.FC<TimerOverlayProps> = ({
   remainingSeconds,
   totalDurationSeconds,
   speechDurationSeconds,
-  isMirrored,
-  onToggleMirror,
   onDoneResearching,
   onStartSpeech,
   onClose,
@@ -130,8 +125,8 @@ export const TimerOverlay: React.FC<TimerOverlayProps> = ({
       aria-label={ariaLabel}
     >
       <div className="timer-overlay-inner">
-        {/* Mirrored Stage Content */}
-        <div className={`timer-mirrored-content ${isMirrored ? 'is-mirrored-page' : ''}`}>
+        {/* Stage Content */}
+        <div className="timer-mirrored-content">
           {/* Topic Title */}
           {topic && <h3 className="timer-topic">{topic}</h3>}
 
@@ -200,18 +195,6 @@ export const TimerOverlay: React.FC<TimerOverlayProps> = ({
               I'm ready to speak
             </button>
           )}
-
-          {/* Mirror Toggle Button Inside Timer */}
-          <button
-            type="button"
-            className={`btn secondary timer-mirror-btn ${isMirrored ? 'is-active' : ''}`}
-            onClick={onToggleMirror}
-            title={isMirrored ? 'Turn mirror mode off' : 'Turn mirror mode on (flip horizontally)'}
-            aria-pressed={isMirrored}
-          >
-            <FlipHorizontal size={14} className={isMirrored ? 'text-[var(--accent)]' : ''} />
-            <span>{isMirrored ? 'Mirror On' : 'Mirror'}</span>
-          </button>
 
           <button
             type="button"

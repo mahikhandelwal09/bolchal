@@ -218,18 +218,19 @@ export function App() {
     }
   }, [totalDays]);
 
-  // Sync mirror state
+  // Apply mirror state to root document element and sync to localStorage
+  useEffect(() => {
+    document.documentElement.classList.toggle('is-mirrored-app', isMirrored);
+    try {
+      localStorage.setItem('bolchal:mirrored', String(isMirrored));
+      localStorage.setItem('unprompted:mirrored', String(isMirrored));
+    } catch {
+      // ignore
+    }
+  }, [isMirrored]);
+
   const handleToggleMirror = useCallback(() => {
-    setIsMirrored((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('bolchal:mirrored', String(next));
-        localStorage.setItem('unprompted:mirrored', String(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    setIsMirrored((prev) => !prev);
   }, []);
 
   // Update remaining seconds if idle
@@ -481,8 +482,8 @@ export function App() {
           </div>
         )}
 
-        {/* Mirrored Stage Area */}
-        <div className={`mirror-content-wrapper ${isMirrored ? 'is-mirrored-page' : ''}`}>
+        {/* Main Content Area */}
+        <div className="mirror-content-wrapper">
           {/* Brand Heading */}
           <div className="brand" inert={isTimerActive || undefined}>
             <h1 className="brand-mark">BolChal</h1>
@@ -600,8 +601,6 @@ export function App() {
             remainingSeconds={remainingSeconds}
             totalDurationSeconds={timerState === 'research' ? researchSeconds : speechSeconds}
             speechDurationSeconds={speechSeconds}
-            isMirrored={isMirrored}
-            onToggleMirror={handleToggleMirror}
             onDoneResearching={handleDoneResearching}
             onStartSpeech={startSpeechPhase}
             onClose={handleCloseTimer}

@@ -10,6 +10,17 @@
     <meta name="theme-color" content="#121816" />
     <meta name="color-scheme" content="dark" />
 
+    <script>
+      try {
+        if (
+          localStorage.getItem('bolchal:mirrored') === 'true' ||
+          localStorage.getItem('unprompted:mirrored') === 'true'
+        ) {
+          document.documentElement.classList.add('is-mirrored-app');
+        }
+      } catch (e) {}
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
